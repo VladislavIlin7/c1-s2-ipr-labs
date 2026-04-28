@@ -6,6 +6,9 @@ on:
     branches:
       - main
       - develop
+      - lab-5
+      - lab-6
+      - lab-7
     tags:
       - "v*"
   pull_request:
