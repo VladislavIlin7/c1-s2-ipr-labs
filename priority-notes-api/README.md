@@ -1,169 +1,62 @@
 # Priority Notes API
 
-Учебный REST API для заметок по матрице Эйзенхауэра. Проект показывает, как связать FastAPI, async Redis, Pydantic, pytest, Docker и GitLab CI/CD в небольшой, понятный сервис.
+Учебный REST API для создания заметок по матрице Эйзенхауэра.
 
-## Стек
+Данные сохраняются в SQLite-файл `notes.db`, который создается автоматически при запуске приложения.
 
-- Python 3.11+
-- FastAPI
-- Redis async client
-- Pydantic
-- pytest, pytest-asyncio, pytest-cov
-- httpx
-- Docker, Docker Compose
-- GitLab CI/CD
+## Возможности
 
-## Структура проекта
+- Создание заметок
+- Получение списка заметок
+- Получение заметки по ID
+- Удаление заметки
+- Хранение заметок в SQLite
+- Автоматическое определение квадранта:
+  - do_now
+  - schedule
+  - delegate
+  - delete
 
-```text
-priority-notes-api/
-├── README.md
-├── LICENSE
-├── .gitignore
-├── .gitlab-ci.yml
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── pytest.ini
-├── src/
-│   ├── main.py
-│   ├── schemas.py
-│   ├── config.py
-│   ├── services/
-│   │   └── notes_service.py
-│   └── storage/
-│       └── redis_client.py
-├── tests/
-│   ├── conftest.py
-│   ├── test_notes_service.py
-│   ├── test_api.py
-│   └── test_integration_redis.py
-└── docs/
-    └── api.md
-```
-
-## Как это работает
-
-Redis используется для хранения:
-
-- заметок в ключах `note:{id}`;
-- индексов категорий в множествах `category:{category}`;
-- счетчика созданных заметок `stats:created_count`;
-- TTL для срочных заметок.
-
-Категория определяется в функции `determine_category`:
-
-- `urgent_important` - важные и срочные;
-- `not_urgent_important` - важные и несрочные;
-- `urgent_not_important` - неважные и срочные;
-- `not_urgent_not_important` - неважные и несрочные.
-
-## Локальный запуск
-
-Нужен Python 3.11+ и запущенный Redis.
+## Запуск локально
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
 pip install -r requirements.txt
-export REDIS_URL=redis://localhost:6379/0
 uvicorn src.main:app --reload
 ```
 
-Для PowerShell:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-$env:REDIS_URL = "redis://localhost:6379/0"
-uvicorn src.main:app --reload
-```
-
-API будет доступен на `http://localhost:8000`.
-
-## Запуск через Docker Compose
+## Запуск тестов
 
 ```bash
-docker compose up --build
+pytest --cov=src
 ```
 
-Сервисы:
-
-- `app` - FastAPI приложение на порту `8000`;
-- `redis` - Redis на порту `6379`.
-
-Проверка:
+## Docker
 
 ```bash
-curl http://localhost:8000/health
+docker build -t priority-notes-api .
+docker run -p 8000:8000 priority-notes-api
 ```
 
-## Тесты и coverage
+Dockerfile использует multi-stage build.
 
-Unit и API-тесты используют in-memory fake Redis. Интеграционный тест подключается к Redis по `REDIS_URL`; если Redis недоступен локально, он будет пропущен.
+## SQLite
 
-```bash
-pytest --cov=src --cov-fail-under=70 --cov-report=term-missing --cov-report=xml:coverage.xml --junitxml=junit.xml
-```
+Приложение использует стандартный модуль Python `sqlite3`, поэтому отдельная зависимость для SQLite не нужна.
 
-Ожидаемое покрытие проекта: больше 70%.
+Таблица `notes` создается автоматически со следующими полями:
 
-## API endpoints
+- `id`
+- `title`
+- `description`
+- `important`
+- `urgent`
+- `quadrant`
 
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/health` | Проверка приложения и Redis |
-| `POST` | `/notes` | Создать заметку |
-| `GET` | `/notes` | Получить все заметки |
-| `GET` | `/notes/{note_id}` | Получить заметку по ID |
-| `DELETE` | `/notes/{note_id}` | Удалить заметку |
-| `GET` | `/notes/category/{category}` | Получить заметки по категории |
-| `GET` | `/stats` | Получить статистику |
+## GitHub Actions secrets
 
-Подробное описание API находится в [docs/api.md](docs/api.md).
+Для публикации Docker-образа в GitHub надо добавить секреты:
 
-## Пример запроса
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
 
-```bash
-curl -X POST http://localhost:8000/notes \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Prepare release",
-    "content": "Check tests and publish image",
-    "is_important": true,
-    "is_urgent": true
-  }'
-```
-
-## Переменные окружения
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
-| `URGENT_NOTE_TTL_SECONDS` | `86400` | TTL для срочных заметок |
-| `LOG_LEVEL` | `INFO` | Уровень логирования |
-
-## GitLab CI/CD
-
-Pipeline описан в `.gitlab-ci.yml` и содержит стадии:
-
-- `test` - поднимает Redis service, ставит зависимости, запускает pytest, генерирует junit и coverage reports;
-- `build` - собирает Docker image после успешных тестов и проверяет, что контейнер стартует;
-- `publish` - публикует image в GitLab Container Registry.
-
-В pipeline используются:
-
-- `rules` вместо `only/except`;
-- переменные окружения GitLab Container Registry;
-- pip cache;
-- artifacts для `junit.xml` и `coverage.xml`;
-- Redis service для интеграционных тестов.
-
-## Разработчик
-
-Учебный проект подготовлен для лабораторной работы и демонстрации production-like структуры небольшого API-сервиса.
-
-## Лицензия
-
-MIT. См. [LICENSE](LICENSE).
+Путь: `Settings -> Secrets and variables -> Actions -> New repository secret`.

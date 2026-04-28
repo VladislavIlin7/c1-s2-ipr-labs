@@ -1,60 +1,74 @@
-import pytest
+from fastapi.testclient import TestClient
+
+from src.main import app
+from src.storage import reset_storage
+
+client = TestClient(app)
 
 
-@pytest.mark.asyncio
-async def test_health(api_client):
-    response = await api_client.get("/health")
+def setup_function():
+    reset_storage()
+
+
+def test_health_check():
+    response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-@pytest.mark.asyncio
-async def test_create_get_list_and_delete_note(api_client):
-    create_response = await api_client.post(
-        "/notes",
-        json={
-            "title": "Prepare demo",
-            "content": "Show Priority Notes API",
-            "is_important": True,
-            "is_urgent": False,
-        },
-    )
+def test_create_note():
+    response = client.post("/notes", json={
+        "title": "Study CI/CD",
+        "description": "Prepare pipeline",
+        "important": True,
+        "urgent": True
+    })
 
-    assert create_response.status_code == 201
-    note = create_response.json()
-    assert note["category"] == "not_urgent_important"
+    data = response.json()
 
-    get_response = await api_client.get(f"/notes/{note['id']}")
-    list_response = await api_client.get("/notes")
-    category_response = await api_client.get("/notes/category/not_urgent_important")
-    stats_response = await api_client.get("/stats")
-    delete_response = await api_client.delete(f"/notes/{note['id']}")
-    missing_response = await api_client.get(f"/notes/{note['id']}")
-
-    assert get_response.status_code == 200
-    assert list_response.status_code == 200
-    assert len(list_response.json()) == 1
-    assert category_response.status_code == 200
-    assert len(category_response.json()) == 1
-    assert stats_response.json()["created_count"] == 1
-    assert delete_response.status_code == 204
-    assert missing_response.status_code == 404
+    assert response.status_code == 200
+    assert data["id"] == 1
+    assert data["quadrant"] == "do_now"
 
 
-@pytest.mark.asyncio
-async def test_create_note_validation_error(api_client):
-    response = await api_client.post(
-        "/notes",
-        json={"title": "", "content": "", "is_important": True, "is_urgent": True},
-    )
+def test_get_notes():
+    client.post("/notes", json={
+        "title": "Read docs",
+        "description": "",
+        "important": True,
+        "urgent": False
+    })
 
-    assert response.status_code == 422
+    response = client.get("/notes")
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
 
 
-@pytest.mark.asyncio
-async def test_invalid_category_returns_validation_error(api_client):
-    response = await api_client.get("/notes/category/unknown")
+def test_get_note_by_id():
+    client.post("/notes", json={
+        "title": "Test note",
+        "description": "",
+        "important": False,
+        "urgent": True
+    })
 
-    assert response.status_code == 422
+    response = client.get("/notes/1")
 
+    assert response.status_code == 200
+    assert response.json()["title"] == "Test note"
+
+
+def test_delete_note():
+    client.post("/notes", json={
+        "title": "Delete me",
+        "description": "",
+        "important": False,
+        "urgent": False
+    })
+
+    response = client.delete("/notes/1")
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Note deleted"
