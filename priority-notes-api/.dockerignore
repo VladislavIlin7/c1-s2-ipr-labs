@@ -9,7 +9,7 @@ coverage.xml
 *.db
 .env
 .git/
-.github/
+../.github/
 .idea/
 .vscode/
 docs/
