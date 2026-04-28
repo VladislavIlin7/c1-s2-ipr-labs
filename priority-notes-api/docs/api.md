@@ -2,7 +2,7 @@
 
 Base URL: `http://localhost:8000`
 
-Данные API сохраняются в SQLite-файл `notes.db`.
+Данные API сохраняются в PostgreSQL.
 
 ## Note structure
 

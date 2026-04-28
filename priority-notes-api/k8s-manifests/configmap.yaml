@@ -6,4 +6,6 @@ metadata:
 data:
   APP_ENV: "production"
   LOG_LEVEL: "info"
-  NOTES_DB_PATH: "/data/notes.db"
+  POSTGRES_DB: "priority_notes"
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"

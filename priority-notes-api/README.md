@@ -2,7 +2,7 @@
 
 Учебный REST API для создания заметок по матрице Эйзенхауэра.
 
-Данные сохраняются в SQLite-файл `notes.db`, который создается автоматически при запуске приложения.
+Данные сохраняются в PostgreSQL. Приложение подключается к базе через переменную окружения `DATABASE_URL`.
 
 ## Возможности
 
@@ -10,21 +10,42 @@
 - Получение списка заметок
 - Получение заметки по ID
 - Удаление заметки
-- Хранение заметок в SQLite
+- Хранение заметок в PostgreSQL
 - Автоматическое определение квадранта:
   - do_now
   - schedule
   - delegate
   - delete
 
-## Запуск локально
+## Запуск PostgreSQL локально
+
+```bash
+docker run --name priority-notes-postgres \
+  -e POSTGRES_DB=priority_notes \
+  -e POSTGRES_USER=notes_user \
+  -e POSTGRES_PASSWORD=notes_password \
+  -p 5432:5432 \
+  -d postgres:16-alpine
+```
+
+## Запуск API локально
 
 ```bash
 pip install -r requirements.txt
+set DATABASE_URL=postgresql://notes_user:notes_password@localhost:5432/priority_notes
+uvicorn src.main:app --reload
+```
+
+Для PowerShell:
+
+```powershell
+$env:DATABASE_URL = "postgresql://notes_user:notes_password@localhost:5432/priority_notes"
 uvicorn src.main:app --reload
 ```
 
 ## Запуск тестов
+
+Перед тестами должен быть доступен PostgreSQL.
 
 ```bash
 pytest --cov=src
@@ -34,14 +55,14 @@ pytest --cov=src
 
 ```bash
 docker build -t priority-notes-api .
-docker run -p 8000:8000 priority-notes-api
+docker run -p 8000:8000 ^
+  -e DATABASE_URL=postgresql://notes_user:notes_password@host.docker.internal:5432/priority_notes ^
+  priority-notes-api
 ```
 
 Dockerfile использует multi-stage build.
 
-## SQLite
-
-Приложение использует стандартный модуль Python `sqlite3`, поэтому отдельная зависимость для SQLite не нужна.
+## PostgreSQL
 
 Таблица `notes` создается автоматически со следующими полями:
 

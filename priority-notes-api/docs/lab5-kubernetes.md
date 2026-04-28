@@ -2,20 +2,18 @@
 
 ## Цель
 
-Развернуть приложение `Priority Notes API` в Kubernetes с помощью YAML-манифестов, проверить работу Deployment, Service, Namespace, ConfigMap, Secret, PersistentVolumeClaim, Ingress и HPA.
+Развернуть `Priority Notes API` в Kubernetes с помощью YAML-манифестов и показать работу Namespace, Deployment, Service, ConfigMap, Secret, PersistentVolumeClaim, Ingress и HPA.
 
 ## Что разворачивается
 
-Приложение:
-
 - FastAPI REST API
-- SQLite для хранения заметок
-- Docker-образ `priority-notes-api:1.0`
-- HTTP-порт контейнера `8000`
+- PostgreSQL для хранения заметок
+- Docker-образ API `priority-notes-api:1.0`
+- PostgreSQL-образ `postgres:16-alpine`
+- HTTP-порт API `8000`
+- PostgreSQL-порт `5432`
 
-SQLite хранится в файле `/data/notes.db`. Этот путь передается через переменную окружения `NOTES_DB_PATH`, а каталог `/data` подключается через PersistentVolumeClaim.
-
-## Структура Kubernetes-манифестов
+## Структура манифестов
 
 ```text
 k8s-manifests/
@@ -23,70 +21,31 @@ k8s-manifests/
 ├── configmap.yaml
 ├── secret.yaml
 ├── persistent-volume-claim.yaml
+├── postgres-deployment.yaml
+├── postgres-service.yaml
 ├── deployment.yaml
 ├── service.yaml
 ├── ingress.yaml
 └── hpa.yaml
 ```
 
-## Подготовка Docker Desktop Kubernetes
-
-Проверить, что Kubernetes включен:
-
-```bash
-kubectl cluster-info
-kubectl get nodes
-kubectl config current-context
-```
-
-Для Docker Desktop ожидаемый контекст:
-
-```bash
-docker-desktop
-```
-
-Если выбран другой контекст:
-
-```bash
-kubectl config use-context docker-desktop
-```
-
-## Сборка Docker-образа
-
-Из каталога `priority-notes-api`:
+## Сборка образа API
 
 ```bash
 docker build -t priority-notes-api:1.0 .
-```
-
-Проверка:
-
-```bash
 docker images | findstr priority-notes-api
 ```
 
-В Docker Desktop Kubernetes локальный образ доступен кластеру, поэтому для локальной лабораторной публикация в registry не обязательна.
+В Docker Desktop Kubernetes локальный образ доступен кластеру, поэтому для лабораторной публикация в registry не обязательна.
 
 ## Применение манифестов
 
 ```bash
+kubectl config use-context docker-desktop
 kubectl apply -f k8s-manifests/
 ```
 
-Или по шагам:
-
-```bash
-kubectl apply -f k8s-manifests/namespace.yaml
-kubectl apply -f k8s-manifests/configmap.yaml
-kubectl apply -f k8s-manifests/secret.yaml
-kubectl apply -f k8s-manifests/persistent-volume-claim.yaml
-kubectl apply -f k8s-manifests/deployment.yaml
-kubectl apply -f k8s-manifests/service.yaml
-kubectl apply -f k8s-manifests/ingress.yaml
-kubectl apply -f k8s-manifests/hpa.yaml
-```
-
-## Проверка развертывания
+## Проверка
 
 ```bash
 kubectl get namespace lab5
@@ -97,32 +56,27 @@ kubectl get pvc -n lab5
 kubectl get hpa -n lab5
 ```
 
-Подробная информация:
-
-```bash
-kubectl describe deployment priority-notes-deployment -n lab5
-kubectl describe service priority-notes-service -n lab5
-kubectl describe pvc priority-notes-sqlite-pvc -n lab5
-```
-
-Логи:
+Логи API:
 
 ```bash
 kubectl logs deployment/priority-notes-deployment -n lab5
 ```
 
+Логи PostgreSQL:
+
+```bash
+kubectl logs deployment/postgres-deployment -n lab5
+```
+
 ## Доступ к приложению
 
-Service имеет тип `NodePort` и порт `30080`.
-
-Открыть:
+Service API имеет тип `NodePort` и порт `30080`.
 
 ```text
-http://localhost:30080
 http://localhost:30080/docs
 ```
 
-Проверка через командную строку:
+Проверка:
 
 ```bash
 curl http://localhost:30080/health
@@ -134,117 +88,101 @@ curl http://localhost:30080/notes
 ```bash
 curl -X POST http://localhost:30080/notes \
   -H "Content-Type: application/json" \
-  -d "{\"title\":\"Kubernetes lab\",\"description\":\"Deploy Priority Notes API\",\"important\":true,\"urgent\":true}"
-```
-
-Альтернативный доступ через port-forward:
-
-```bash
-kubectl port-forward service/priority-notes-service 8080:80 -n lab5
-```
-
-После этого API доступен по адресу:
-
-```text
-http://localhost:8080/docs
+  -d "{\"title\":\"Kubernetes lab\",\"description\":\"Deploy Priority Notes API with PostgreSQL\",\"important\":true,\"urgent\":true}"
 ```
 
 ## ConfigMap и Secret
 
-ConfigMap `priority-notes-config` хранит обычную конфигурацию:
+ConfigMap `priority-notes-config` хранит обычные настройки:
 
 - `APP_ENV`
 - `LOG_LEVEL`
-- `NOTES_DB_PATH`
+- `POSTGRES_DB`
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
 
-Secret `priority-notes-secret` хранит условный секрет:
+Secret `priority-notes-secret` хранит чувствительные данные:
 
 - `APP_SECRET_KEY`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `DATABASE_URL`
 
-В Deployment они подключены через `envFrom`.
+API получает `DATABASE_URL` через `envFrom` и подключается к PostgreSQL через Kubernetes Service `postgres-service`.
 
-## SQLite и PersistentVolumeClaim
+## PostgreSQL и PersistentVolumeClaim
 
-Так как приложение использует SQLite, в Kubernetes добавлен PVC:
-
-```text
-priority-notes-sqlite-pvc
-```
-
-Он монтируется в Pod по пути:
+PostgreSQL хранит данные в PVC:
 
 ```text
-/data
+postgres-pvc
 ```
 
-Файл базы:
+PVC монтируется в PostgreSQL Pod по пути:
 
 ```text
-/data/notes.db
+/var/lib/postgresql/data
 ```
 
-Для SQLite в учебном варианте задана `replicas: 1`. Масштабирование API с общей SQLite-базой не является хорошей production-практикой. Для нескольких реплик лучше использовать отдельную СУБД, например PostgreSQL.
+API больше не хранит файл базы внутри своего Pod, поэтому его можно масштабировать независимо от базы данных.
+
+## Deployment API
+
+API запускается через `priority-notes-deployment`.
+
+Важные параметры:
+
+- `replicas: 2`
+- `image: priority-notes-api:1.0`
+- `imagePullPolicy: IfNotPresent`
+- `livenessProbe` и `readinessProbe` ходят на `/health`
+- `resources.requests` и `resources.limits` задают CPU и memory
+
+## Service
+
+`priority-notes-service` имеет тип `NodePort`.
+
+- внутренний порт Service: `80`
+- порт контейнера API: `8000`
+- внешний порт узла: `30080`
+
+`postgres-service` имеет тип `ClusterIP`, поэтому PostgreSQL доступен только внутри кластера.
 
 ## Ingress
 
-Манифест `ingress.yaml` описывает доступ через host:
+Ingress описывает доступ через host:
 
 ```text
 priority-notes.local
 ```
 
-Для работы нужен Ingress Controller, например Nginx Ingress Controller. Также нужно добавить запись в hosts:
+Для работы нужен Ingress Controller, например Nginx Ingress Controller, и запись в hosts:
 
 ```text
 127.0.0.1 priority-notes.local
 ```
 
-После настройки:
+## HPA
 
-```text
-http://priority-notes.local/docs
-```
-
-## Horizontal Pod Autoscaler
-
-Манифест `hpa.yaml` задает автоматическое масштабирование:
+`priority-notes-hpa` масштабирует API:
 
 - минимум `1` Pod
 - максимум `3` Pod
 - целевая загрузка CPU `60%`
 
-Проверка:
+Для работы HPA нужен metrics-server.
+
+## Ручное масштабирование
 
 ```bash
-kubectl get hpa -n lab5
-```
-
-Для полноценной работы HPA в локальном кластере должен быть установлен metrics-server.
-
-## Масштабирование вручную
-
-```bash
-kubectl scale deployment priority-notes-deployment --replicas=2 -n lab5
+kubectl scale deployment priority-notes-deployment --replicas=3 -n lab5
 kubectl get pods -n lab5
-```
-
-Для текущей SQLite-версии после демонстрации лучше вернуть одну реплику:
-
-```bash
-kubectl scale deployment priority-notes-deployment --replicas=1 -n lab5
 ```
 
 ## Обновление приложения
 
-Собрать новую версию:
-
 ```bash
 docker build -t priority-notes-api:2.0 .
-```
-
-Обновить Deployment:
-
-```bash
 kubectl set image deployment/priority-notes-deployment priority-notes-api=priority-notes-api:2.0 -n lab5
 kubectl rollout status deployment/priority-notes-deployment -n lab5
 kubectl rollout history deployment/priority-notes-deployment -n lab5
@@ -258,14 +196,6 @@ kubectl rollout undo deployment/priority-notes-deployment -n lab5
 
 ## Удаление ресурсов
 
-Удалить все ресурсы лабораторной:
-
 ```bash
 kubectl delete namespace lab5
-```
-
-Или удалить только созданные манифесты:
-
-```bash
-kubectl delete -f k8s-manifests/
 ```

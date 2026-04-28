@@ -18,6 +18,22 @@ jobs:
   test:
     name: Run unit tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: priority_notes
+          POSTGRES_USER: notes_user
+          POSTGRES_PASSWORD: notes_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U notes_user -d priority_notes"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://notes_user:notes_password@localhost:5432/priority_notes
 
     steps:
       - name: Checkout repository

@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+psycopg[binary]
 pytest
 pytest-cov
 httpx

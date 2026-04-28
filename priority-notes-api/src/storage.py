@@ -1,30 +1,33 @@
 import os
-import sqlite3
-from pathlib import Path
 
-DB_PATH = Path(os.getenv("NOTES_DB_PATH", Path(__file__).resolve().parent.parent / "notes.db"))
+import psycopg
+from psycopg.rows import dict_row
+
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://notes_user:notes_password@localhost:5432/priority_notes",
+)
 
 
 def get_connection():
-    connection = sqlite3.connect(DB_PATH)
-    connection.row_factory = sqlite3.Row
-    return connection
+    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
 
 def init_db():
     with get_connection() as connection:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS notes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                description TEXT NOT NULL DEFAULT '',
-                important INTEGER NOT NULL,
-                urgent INTEGER NOT NULL,
-                quadrant TEXT NOT NULL
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS notes (
+                    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    important BOOLEAN NOT NULL,
+                    urgent BOOLEAN NOT NULL,
+                    quadrant TEXT NOT NULL
+                )
+                """
             )
-            """
-        )
 
 
 def row_to_note(row):
@@ -32,8 +35,8 @@ def row_to_note(row):
         "id": row["id"],
         "title": row["title"],
         "description": row["description"],
-        "important": bool(row["important"]),
-        "urgent": bool(row["urgent"]),
+        "important": row["important"],
+        "urgent": row["urgent"],
         "quadrant": row["quadrant"],
     }
 
@@ -51,9 +54,15 @@ def get_quadrant(important: bool, urgent: bool) -> str:
 def get_notes():
     init_db()
     with get_connection() as connection:
-        rows = connection.execute(
-            "SELECT id, title, description, important, urgent, quadrant FROM notes ORDER BY id"
-        ).fetchall()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, title, description, important, urgent, quadrant
+                FROM notes
+                ORDER BY id
+                """
+            )
+            rows = cursor.fetchall()
     return [row_to_note(row) for row in rows]
 
 
@@ -62,20 +71,22 @@ def create_note(note):
     quadrant = get_quadrant(note.important, note.urgent)
 
     with get_connection() as connection:
-        cursor = connection.execute(
-            """
-            INSERT INTO notes (title, description, important, urgent, quadrant)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                note.title,
-                note.description,
-                int(note.important),
-                int(note.urgent),
-                quadrant,
-            ),
-        )
-        note_id = cursor.lastrowid
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO notes (title, description, important, urgent, quadrant)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    note.title,
+                    note.description,
+                    note.important,
+                    note.urgent,
+                    quadrant,
+                ),
+            )
+            note_id = cursor.fetchone()["id"]
 
     return {
         "id": note_id,
@@ -90,14 +101,16 @@ def create_note(note):
 def get_note(note_id: int):
     init_db()
     with get_connection() as connection:
-        row = connection.execute(
-            """
-            SELECT id, title, description, important, urgent, quadrant
-            FROM notes
-            WHERE id = ?
-            """,
-            (note_id,),
-        ).fetchone()
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, title, description, important, urgent, quadrant
+                FROM notes
+                WHERE id = %s
+                """,
+                (note_id,),
+            )
+            row = cursor.fetchone()
 
     if row is None:
         return None
@@ -108,15 +121,13 @@ def get_note(note_id: int):
 def delete_note(note_id: int) -> bool:
     init_db()
     with get_connection() as connection:
-        cursor = connection.execute("DELETE FROM notes WHERE id = ?", (note_id,))
-    return cursor.rowcount > 0
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM notes WHERE id = %s", (note_id,))
+            return cursor.rowcount > 0
 
 
 def reset_storage():
     init_db()
     with get_connection() as connection:
-        connection.execute("DELETE FROM notes")
-        connection.execute("DELETE FROM sqlite_sequence WHERE name = 'notes'")
-
-
-init_db()
+        with connection.cursor() as cursor:
+            cursor.execute("TRUNCATE TABLE notes RESTART IDENTITY")

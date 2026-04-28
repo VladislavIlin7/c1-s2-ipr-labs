@@ -7,7 +7,7 @@ metadata:
     app: priority-notes
     version: v1
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: priority-notes
@@ -36,9 +36,6 @@ spec:
             limits:
               memory: "256Mi"
               cpu: "250m"
-          volumeMounts:
-            - name: sqlite-data
-              mountPath: /data
           livenessProbe:
             httpGet:
               path: /health
@@ -51,7 +48,3 @@ spec:
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 5
-      volumes:
-        - name: sqlite-data
-          persistentVolumeClaim:
-            claimName: priority-notes-sqlite-pvc
