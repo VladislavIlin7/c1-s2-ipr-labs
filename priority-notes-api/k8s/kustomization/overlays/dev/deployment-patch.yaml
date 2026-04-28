@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: priority-notes-deployment
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: priority-notes-api
+          resources:
+            requests:
+              memory: 64Mi
+              cpu: 50m
+            limits:
+              memory: 256Mi
+              cpu: 250m

@@ -1,0 +1,9 @@
+replicaCount: 2
+
+secret:
+  appSecretKey: dev-secret
+  databaseUrl: postgresql://notes_user:notes_password@postgres-0.postgres.priority-notes-dev.svc.cluster.local:5432/priority_notes
+
+service:
+  type: NodePort
+  nodePort: 30080

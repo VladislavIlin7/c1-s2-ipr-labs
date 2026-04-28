@@ -1,0 +1,39 @@
+replicaCount: 2
+
+image:
+  repository: priority-notes-api
+  tag: "1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8000
+  nodePort: 30080
+
+config:
+  appEnv: production
+  logLevel: info
+
+secret:
+  appSecretKey: dev-secret
+  databaseUrl: postgresql://notes_user:notes_password@postgres-0.postgres.priority-notes-dev.svc.cluster.local:5432/priority_notes
+
+resources:
+  requests:
+    memory: 64Mi
+    cpu: 50m
+  limits:
+    memory: 256Mi
+    cpu: 250m
+
+ingress:
+  enabled: false
+  className: nginx
+  host: priority-notes.local
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  averageCpuUtilization: 60

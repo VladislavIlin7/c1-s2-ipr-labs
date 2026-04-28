@@ -1,0 +1,22 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: priority-notes-ingress
+  labels:
+    app: priority-notes
+    app.kubernetes.io/name: {{ .Chart.Name }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: priority-notes-service
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}

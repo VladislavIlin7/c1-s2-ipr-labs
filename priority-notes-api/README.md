@@ -92,6 +92,16 @@ http://localhost:30080/docs
 
 Подробная инструкция находится в [docs/lab5-kubernetes.md](docs/lab5-kubernetes.md).
 
+## Kustomize и Helm
+
+Для лабораторной работы №6 добавлены:
+
+- инфраструктурный каталог `../priority-notes-infra` с PostgreSQL;
+- Kustomize base/overlays приложения в `k8s/kustomization`;
+- Helm chart приложения в `k8s/helm/priority-notes-app`.
+
+Подробная инструкция находится в [docs/lab6-kustomize-helm.md](docs/lab6-kustomize-helm.md).
+
 ## GitHub Actions secrets
 
 Для публикации Docker-образа в GitHub надо добавить секреты:

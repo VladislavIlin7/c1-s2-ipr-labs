@@ -1,0 +1,29 @@
+replicaCount: 3
+
+image:
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  nodePort: null
+
+secret:
+  appSecretKey: CHANGE_ME_IN_CI_OR_SECRET_MANAGER
+  databaseUrl: postgresql://notes_user:CHANGE_ME@postgres-0.postgres.priority-notes-infra-prod.svc.cluster.local:5432/priority_notes
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+
+ingress:
+  enabled: true
+  className: nginx
+  host: priority-notes.local
+
+hpa:
+  minReplicas: 2
+  maxReplicas: 6

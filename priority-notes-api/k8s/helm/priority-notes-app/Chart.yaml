@@ -1,0 +1,6 @@
+apiVersion: v2
+name: priority-notes-app
+description: Priority Notes API application chart
+type: application
+version: 0.1.0
+appVersion: "1.0"

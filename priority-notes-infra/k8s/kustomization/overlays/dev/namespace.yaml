@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: priority-notes-dev
+  labels:
+    environment: dev
+    owner: infrastructure

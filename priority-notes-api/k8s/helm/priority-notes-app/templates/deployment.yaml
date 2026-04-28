@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: priority-notes-deployment
+  labels:
+    app: priority-notes
+    app.kubernetes.io/name: {{ .Chart.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: priority-notes
+  template:
+    metadata:
+      labels:
+        app: priority-notes
+        app.kubernetes.io/name: {{ .Chart.Name }}
+    spec:
+      containers:
+        - name: priority-notes-api
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: priority-notes-config
+            - secretRef:
+                name: priority-notes-secret
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5

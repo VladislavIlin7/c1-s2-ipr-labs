@@ -1,0 +1,7 @@
+auth:
+  database: priority_notes
+  username: notes_user
+  password: notes_password
+
+persistence:
+  size: 1Gi
