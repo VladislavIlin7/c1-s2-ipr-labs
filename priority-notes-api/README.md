@@ -52,6 +52,25 @@ Dockerfile использует multi-stage build.
 - `urgent`
 - `quadrant`
 
+## Kubernetes
+
+Для лабораторной работы №5 добавлены Kubernetes-манифесты в каталоге `k8s-manifests/`.
+
+Основной запуск:
+
+```bash
+docker build -t priority-notes-api:1.0 .
+kubectl apply -f k8s-manifests/
+```
+
+После развертывания API доступен через NodePort:
+
+```text
+http://localhost:30080/docs
+```
+
+Подробная инструкция находится в [docs/lab5-kubernetes.md](docs/lab5-kubernetes.md).
+
 ## GitHub Actions secrets
 
 Для публикации Docker-образа в GitHub надо добавить секреты:

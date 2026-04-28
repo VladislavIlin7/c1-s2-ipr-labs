@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.pytest_cache/
+pytest-cache-files-*/
+.coverage
+htmlcov/
+coverage.xml
+*.pyc
+*.db
+.env
+.git/
+.github/
+.idea/
+.vscode/
+docs/
+tests/
+k8s-manifests/

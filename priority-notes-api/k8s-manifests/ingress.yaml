@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: priority-notes-ingress
+  namespace: lab5
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: priority-notes.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: priority-notes-service
+                port:
+                  number: 80
