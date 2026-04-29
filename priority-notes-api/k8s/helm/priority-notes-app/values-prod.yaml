@@ -24,6 +24,9 @@ ingress:
   className: nginx
   host: priority-notes.local
 
+config:
+  otelExporterOtlpEndpoint: http://tempo.observability.svc.cluster.local:4318
+
 hpa:
   minReplicas: 2
   maxReplicas: 6

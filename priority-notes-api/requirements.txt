@@ -1,6 +1,10 @@
 fastapi
 uvicorn
 psycopg[binary]
+prometheus-client
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-exporter-otlp
 pytest
 pytest-cov
 httpx

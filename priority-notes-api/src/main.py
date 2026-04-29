@@ -1,9 +1,11 @@
 from fastapi import FastAPI, HTTPException
 
+from src.observability import add_observability, record_note_created
 from src import storage
 from src.models import Note, NoteCreate
 
 app = FastAPI(title="Priority Notes API")
+add_observability(app)
 
 
 @app.get("/")
@@ -23,7 +25,9 @@ def get_notes():
 
 @app.post("/notes", response_model=Note)
 def create_note(note: NoteCreate):
-    return storage.create_note(note)
+    created_note = storage.create_note(note)
+    record_note_created(created_note["quadrant"])
+    return created_note
 
 
 @app.get("/notes/{note_id}")

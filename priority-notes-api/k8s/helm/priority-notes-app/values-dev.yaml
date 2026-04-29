@@ -7,3 +7,6 @@ secret:
 service:
   type: NodePort
   nodePort: 30080
+
+config:
+  otelExporterOtlpEndpoint: http://tempo.observability.svc.cluster.local:4318

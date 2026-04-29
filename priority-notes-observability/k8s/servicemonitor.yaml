@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: priority-notes-api
+  namespace: observability
+  labels:
+    release: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - priority-notes-dev
+      - priority-notes-prod
+  selector:
+    matchLabels:
+      app: priority-notes
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

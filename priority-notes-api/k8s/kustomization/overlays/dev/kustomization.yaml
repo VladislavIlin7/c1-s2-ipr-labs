@@ -7,4 +7,5 @@ resources:
   - secret.yaml
   - hpa.yaml
 patches:
+  - path: configmap-patch.yaml
   - path: deployment-patch.yaml

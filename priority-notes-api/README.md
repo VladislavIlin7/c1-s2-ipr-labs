@@ -102,6 +102,19 @@ http://localhost:30080/docs
 
 Подробная инструкция находится в [docs/lab6-kustomize-helm.md](docs/lab6-kustomize-helm.md).
 
+## Observability
+
+Для лабораторной работы №7 добавлены:
+
+- endpoint `/metrics`;
+- Prometheus-метрики HTTP-запросов;
+- бизнес-метрика `notes_created_total`;
+- опциональный OpenTelemetry OTLP export в Tempo;
+- локальный Docker Compose стек Prometheus/Grafana/Tempo;
+- отдельный платформенный каталог `../priority-notes-observability`.
+
+Подробная инструкция находится в [docs/lab7-observability.md](docs/lab7-observability.md).
+
 ## GitHub Actions secrets
 
 Для публикации Docker-образа в GitHub надо добавить секреты:
